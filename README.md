@@ -2,15 +2,14 @@
 
 Dynamic DNS updater that syncs your public IP to Cloudflare DNS records.
 
-### Compared to ddclient
-
-| Better here | About the same | Better in ddclient |
-|---|---|---|
-| **YAML config** — no DSL, just plain YAML | **Multiple zones** — both handle it | **IP detection** — HTTP + interface + firewall (we only do HTTP) |
-| **Proxied records** — orange cloud toggle per record, works reliably | **Multi-source fallback** — both try multiple providers | **IPv6** — ddclient supports AAAA records (we don't yet) |
-| **Dry run** — one config flag, zero risk | | |
-| **CronJob native** — fits Kubernetes, no daemon needed | | |
-| **Test suite** — pytest, easy to extend safely | | |
+| vs ddclient | |
+|---|---|
+| YAML config | No DSL, just YAML |
+| Proxied records | Orange cloud toggle works reliably per record |
+| Dry run | One config flag, zero risk |
+| Kubernetes | CronJob native, no daemon |
+| IP detection | HTTP only, ddclient also does interface/firewall |
+| IPv6 | Not yet, ddclient does |
 
 ## Usage
 
