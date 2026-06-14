@@ -30,8 +30,15 @@ def resolve_zone(client: DNSClient, zone_name: str) -> str | None:
     return zone_id
 
 
-def sync_record(client: DNSClient, zone_id: str, record, ip: str):
-    records = client.list_records(zone_id=zone_id, name=record.name, type=record.type)
+def record_fqdn(record_name: str, zone_name: str) -> str:
+    if record_name == "@":
+        return zone_name
+    return f"{record_name}.{zone_name}"
+
+
+def sync_record(client: DNSClient, zone_id: str, zone_name: str, record, ip: str):
+    fqdn = record_fqdn(record.name, zone_name)
+    records = client.list_records(zone_id=zone_id, name=fqdn, type=record.type)
     existing = records[0] if records else None
 
     if existing:
@@ -44,7 +51,7 @@ def sync_record(client: DNSClient, zone_id: str, record, ip: str):
             record_id=existing["id"],
             data={
                 "type": record.type,
-                "name": record.name,
+                "name": fqdn,
                 "content": ip,
                 "ttl": record.ttl,
                 "proxied": record.proxied,
@@ -56,7 +63,7 @@ def sync_record(client: DNSClient, zone_id: str, record, ip: str):
             zone_id=zone_id,
             data={
                 "type": record.type,
-                "name": record.name,
+                "name": fqdn,
                 "content": ip,
                 "ttl": record.ttl,
                 "proxied": record.proxied,
@@ -70,4 +77,4 @@ def sync_all_zones(client: DNSClient, config: AppConfig, ip: str):
         if not zone_id:
             continue
         for record in zone_cfg.records:
-            sync_record(client, zone_id, record, ip)
+            sync_record(client, zone_id, zone_cfg.zone, record, ip)

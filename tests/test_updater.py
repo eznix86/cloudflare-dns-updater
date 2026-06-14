@@ -73,15 +73,16 @@ class TestSyncRecord:
         transport = httpx.MockTransport(
             lambda req: (requests.append((req.method, str(req.url))) or httpx.Response(
                 200,
-                json={"success": True, "result": [{"id": "rec123", "content": "1.2.3.4", "name": "www"}]},
+                json={"success": True, "result": [{"id": "rec123", "content": "1.2.3.4", "name": "www.example.com"}]},
             )),
         )
         with httpx.Client(transport=transport, base_url=BASE_URL) as client:
             cf = CloudflareClient(client)
-            sync_record(cf, "zone123", RecordConfig(name="www"), "1.2.3.4")
+            sync_record(cf, "zone123", "example.com", RecordConfig(name="www"), "1.2.3.4")
 
         assert len(requests) == 1
         assert requests[0][0] == "GET"
+        assert "name=www.example.com" in requests[0][1]
 
     def test_updates_when_ip_changed(self):
         requests = []
@@ -91,7 +92,7 @@ class TestSyncRecord:
                 httpx.Response(
                     200,
                     json=(
-                        {"success": True, "result": [{"id": "rec123", "content": "9.9.9.9", "name": "www"}]}
+                        {"success": True, "result": [{"id": "rec123", "content": "9.9.9.9", "name": "www.example.com"}]}
                         if req.method == "GET"
                         else SUCCESS_RESPONSE
                     ),
@@ -100,12 +101,12 @@ class TestSyncRecord:
         )
         with httpx.Client(transport=handler, base_url=BASE_URL) as client:
             cf = CloudflareClient(client)
-            sync_record(cf, "zone123", RecordConfig(name="www", ttl=300, proxied=True), "1.2.3.4")
+            sync_record(cf, "zone123", "example.com", RecordConfig(name="www", ttl=300, proxied=True), "1.2.3.4")
 
         assert len(requests) == 2
         assert [m for m, *_ in requests] == ["GET", "PUT"]
         payload = json.loads(requests[1][2])
-        assert payload == {"type": "A", "name": "www", "content": "1.2.3.4", "ttl": 300, "proxied": True}
+        assert payload == {"type": "A", "name": "www.example.com", "content": "1.2.3.4", "ttl": 300, "proxied": True}
 
     def test_creates_when_no_record(self):
         requests = []
@@ -124,12 +125,12 @@ class TestSyncRecord:
         )
         with httpx.Client(transport=handler, base_url=BASE_URL) as client:
             cf = CloudflareClient(client)
-            sync_record(cf, "zone123", RecordConfig(name="www"), "1.2.3.4")
+            sync_record(cf, "zone123", "example.com", RecordConfig(name="www"), "1.2.3.4")
 
         assert len(requests) == 2
         assert [m for m, *_ in requests] == ["GET", "POST"]
         payload = json.loads(requests[1][2])
-        assert payload == {"type": "A", "name": "www", "content": "1.2.3.4", "ttl": 120, "proxied": False}
+        assert payload == {"type": "A", "name": "www.example.com", "content": "1.2.3.4", "ttl": 120, "proxied": False}
 
 
 class TestSyncAllZones:
