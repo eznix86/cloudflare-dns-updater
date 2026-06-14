@@ -2,6 +2,17 @@
 
 Dynamic DNS updater that syncs your public IP to Cloudflare DNS records.
 
+| Feature | cloudflare-dns-updater | ddclient |
+|---|---|---|
+| Config format | YAML | Custom flat file |
+| Cloudflare token | API token | API token or global key |
+| Multiple zones | ✅ Native in config | ✅ Via config entries |
+| Proxy (orange cloud) | ✅ Per record | ⚠️ Supported but undocumented |
+| Dry run | ✅ `dry_run: true` | ❌ Requires `--daemon` |
+| Deployment | Docker / CronJob / ad-hoc | Daemon |
+| Language | Python | Perl |
+| Testing | pytest suite | N/A |
+
 ## Usage
 
 ```bash
