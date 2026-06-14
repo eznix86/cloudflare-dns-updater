@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.DS_Store
+.github
+README.md
+Taskfile.yaml
+config.yaml
+tests

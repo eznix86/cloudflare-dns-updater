@@ -1,0 +1,31 @@
+[project]
+name = "cloudflare-dns-updater"
+version = "0.1.0"
+description = "Dynamic DNS updater for Cloudflare"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx",
+    "pyyaml",
+    "structlog>=26.1.0",
+    "typer>=0.26.7",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.410",
+    "pytest>=9.1.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.17",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+lint.select = ["E", "F", "I", "N", "UP", "W"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+include = ["."]
+exclude = [".venv"]

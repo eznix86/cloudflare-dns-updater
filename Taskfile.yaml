@@ -1,0 +1,52 @@
+version: "3"
+
+tasks:
+  run:
+    desc: Run the DNS updater
+    cmds:
+      - uv run main.py --config {{.CLI_ARGS | default "config.yaml"}}
+
+  test:
+    desc: Run tests
+    cmds:
+      - uv run pytest
+
+  testv:
+    desc: Run tests verbose
+    cmds:
+      - uv run pytest -v
+
+  coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - uv run pytest --cov=. --cov-report=term-missing
+
+  coverage-html:
+    desc: Run tests with HTML coverage report
+    cmds:
+      - uv run pytest --cov=. --cov-report=html
+
+  lint:
+    desc: Run ruff linter
+    cmds:
+      - uv run ruff check .
+
+  lint-fix:
+    desc: Run ruff linter with auto-fix
+    cmds:
+      - uv run ruff check --fix .
+
+  format:
+    desc: Run ruff formatter
+    cmds:
+      - uv run ruff format .
+
+  format-check:
+    desc: Check ruff formatting
+    cmds:
+      - uv run ruff format --check .
+
+  typecheck:
+    desc: Run pyright type checker
+    cmds:
+      - uv run pyright
