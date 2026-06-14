@@ -54,37 +54,34 @@ services:
 ## Kubernetes
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: CronJob
 metadata:
   name: cloudflare-dns-updater
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: cloudflare-dns-updater
-  template:
-    metadata:
-      labels:
-        app: cloudflare-dns-updater
+  schedule: "*/5 * * * *"
+  jobTemplate:
     spec:
-      containers:
-        - name: updater
-          image: ghcr.io/eznix86/cloudflare-dns-updater
-          env:
-            - name: CLOUDFLARE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: cloudflare-token
-                  key: token
-          volumeMounts:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: updater
+              image: ghcr.io/eznix86/cloudflare-dns-updater
+              env:
+                - name: CLOUDFLARE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: cloudflare-token
+                      key: token
+              volumeMounts:
+                - name: config
+                  mountPath: /app/config.yaml
+                  subPath: config.yaml
+          volumes:
             - name: config
-              mountPath: /app/config.yaml
-              subPath: config.yaml
-      volumes:
-        - name: config
-          configMap:
-            name: cloudflare-dns-config
+              configMap:
+                name: cloudflare-dns-config
 ```
 
 ## Development
