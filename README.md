@@ -12,6 +12,9 @@ Dynamic DNS updater that syncs your public IP to Cloudflare DNS records.
 | Deployment | Docker / CronJob / ad-hoc | Daemon |
 | Language | Python | Perl |
 | Testing | pytest suite | N/A |
+| IP detection | 5 HTTP sources, fallthrough | HTTP + interface + firewall |
+| IP source resilience | ✅ 5 fallbacks, single-shot | ✅ Configurable, multiple backends |
+| IPv6 | ❌ | ✅ |
 
 ## Usage
 
