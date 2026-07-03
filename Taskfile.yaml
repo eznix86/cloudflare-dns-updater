@@ -22,9 +22,10 @@ tasks:
       - go test -v -count=1 .
 
   lint:
-    desc: Run go vet
+    desc: Run linting
     cmds:
       - go vet ./...
+      - go fix ./...
 
   fmt:
     desc: Format Go code

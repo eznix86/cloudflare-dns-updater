@@ -35,7 +35,10 @@ func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func withTestServer(h http.HandlerFunc) func() {
 	ts := httptest.NewServer(h)
-	u, _ := url.Parse(ts.URL)
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		panic(err)
+	}
 	old := HTTPClient.Transport
 	HTTPClient.Transport = &testTransport{base: u, inner: http.DefaultTransport}
 	return func() {

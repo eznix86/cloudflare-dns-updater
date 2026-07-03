@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	retry "github.com/avast/retry-go/v4"
+	retry "github.com/avast/retry-go/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -59,8 +59,6 @@ var BaseURL = "https://api.cloudflare.com/client/v4"
 func main() {
 	configPath := flag.String("config", "config.yaml", "path to config YAML")
 	flag.Parse()
-
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 
 	config := LoadConfig(*configPath)
 	if config.DryRun {
@@ -147,8 +145,18 @@ func GetPublicIP(ctx context.Context, sources []string) (string, error) {
 
 func FetchIP(ctx context.Context, url string) string {
 	var ip string
-	_ = retry.Do(func() error {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err := retry.New(
+		retry.Attempts(3),
+		retry.Delay(500*time.Millisecond),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			slog.Warn("retrying IP source", "url", url, "attempt", n+1, "error", err)
+		}),
+	).Do(func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
 		resp, err := HTTPClient.Do(req)
 		if err != nil {
 			return err
@@ -166,14 +174,9 @@ func FetchIP(ctx context.Context, url string) string {
 		}
 		ip = strings.TrimSpace(string(body))
 		return nil
-	},
-		retry.Attempts(3),
-		retry.Delay(500*time.Millisecond),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			slog.Warn("retrying IP source", "url", url, "attempt", n+1, "error", err)
-		}),
-	)
+	}); err != nil {
+		slog.Warn("IP source failed", "url", url, "error", err)
+	}
 	return ip
 }
 
@@ -196,7 +199,14 @@ type RecordPayload struct {
 }
 
 func (c *CloudflareClient) Do(ctx context.Context, method, path string, body []byte, out any) error {
-	return retry.Do(func() error {
+	return retry.New(
+		retry.Attempts(3),
+		retry.Delay(500*time.Millisecond),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			slog.Warn("retrying Cloudflare request", "method", method, "path", path, "attempt", n+1, "error", err)
+		}),
+	).Do(func() error {
 		req, err := http.NewRequestWithContext(ctx, method, BaseURL+path, bytes.NewReader(body))
 		if err != nil {
 			return err
@@ -223,14 +233,7 @@ func (c *CloudflareClient) Do(ctx context.Context, method, path string, body []b
 			return json.Unmarshal(data, out)
 		}
 		return nil
-	},
-		retry.Attempts(3),
-		retry.Delay(500*time.Millisecond),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			slog.Warn("retrying Cloudflare request", "method", method, "path", path, "attempt", n+1, "error", err)
-		}),
-	)
+	})
 }
 
 func (c *CloudflareClient) ZoneID(ctx context.Context, name string) (string, error) {
@@ -286,7 +289,10 @@ func SyncRecord(ctx context.Context, c *CloudflareClient, zoneID, zone string, r
 	}
 
 	payload := RecordPayload{fqdn, rec.Type, ip, ttl, rec.Proxied}
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
 
 	if len(existing) > 0 {
 		cur := existing[0]
