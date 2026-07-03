@@ -64,7 +64,7 @@ services:
     environment:
       - CLOUDFLARE_TOKEN=xxx
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - ./config.yaml:/config.yaml
 ```
 
 ## Kubernetes
@@ -92,7 +92,7 @@ spec:
                       key: token
               volumeMounts:
                 - name: config
-                  mountPath: /app/config.yaml
+                  mountPath: /config.yaml
                   subPath: config.yaml
           volumes:
             - name: config
@@ -121,3 +121,7 @@ Default IP sources (used when `ip_sources` is empty or config is missing):
 - `https://ifconfig.co/ip`
 
 IP lookups run concurrently. The first successful response wins. Each source is retried up to 3 times with a configurable delay on 5xx errors. 4xx errors are not retried.
+
+## License
+
+MIT
