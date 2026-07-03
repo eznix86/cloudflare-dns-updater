@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -150,6 +151,12 @@ func FetchIP(ctx context.Context, url string) string {
 		retry.Attempts(3),
 		retry.Delay(RetryDelay),
 		retry.Context(ctx),
+		retry.RetryIf(func(err error) bool {
+			if errors.Is(err, context.Canceled) {
+				return false
+			}
+			return retry.IsRecoverable(err)
+		}),
 		retry.OnRetry(func(n uint, err error) {
 			slog.Warn("retrying IP source", "url", url, "attempt", n+1, "error", err)
 		}),
@@ -175,7 +182,7 @@ func FetchIP(ctx context.Context, url string) string {
 		}
 		ip = strings.TrimSpace(string(body))
 		return nil
-	}); err != nil {
+	}); err != nil && !errors.Is(err, context.Canceled) {
 		slog.Warn("IP source failed", "url", url, "error", err)
 	}
 	return ip
@@ -204,6 +211,12 @@ func (c *CloudflareClient) Do(ctx context.Context, method, path string, body []b
 		retry.Attempts(3),
 		retry.Delay(RetryDelay),
 		retry.Context(ctx),
+		retry.RetryIf(func(err error) bool {
+			if errors.Is(err, context.Canceled) {
+				return false
+			}
+			return retry.IsRecoverable(err)
+		}),
 		retry.OnRetry(func(n uint, err error) {
 			slog.Warn("retrying Cloudflare request", "method", method, "path", path, "attempt", n+1, "error", err)
 		}),
