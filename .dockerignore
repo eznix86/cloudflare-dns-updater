@@ -1,11 +1,9 @@
-.venv
-__pycache__
-*.pyc
 .git
 .gitignore
-.DS_Store
 .github
+.DS_Store
 README.md
 Taskfile.yaml
 config.yaml
-tests
+config.yaml.example
+main_test.go

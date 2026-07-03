@@ -2,51 +2,43 @@ version: "3"
 
 tasks:
   run:
-    desc: Run the DNS updater
+    desc: Run the DNS updater (dry-run with example config)
     cmds:
-      - uv run main.py --config {{.CLI_ARGS | default "config.yaml"}}
+      - go run main.go --config {{.CLI_ARGS | default "config.yaml.example"}}
+
+  build:
+    desc: Build the Go binary
+    cmds:
+      - go build -o updater main.go
 
   test:
     desc: Run tests
     cmds:
-      - uv run pytest
+      - go test -count=1 .
 
   testv:
     desc: Run tests verbose
     cmds:
-      - uv run pytest -v
-
-  coverage:
-    desc: Run tests with coverage report
-    cmds:
-      - uv run pytest --cov=. --cov-report=term-missing
-
-  coverage-html:
-    desc: Run tests with HTML coverage report
-    cmds:
-      - uv run pytest --cov=. --cov-report=html
+      - go test -v -count=1 .
 
   lint:
-    desc: Run ruff linter
+    desc: Run go vet
     cmds:
-      - uv run ruff check .
+      - go vet ./...
 
-  lint-fix:
-    desc: Run ruff linter with auto-fix
+  fmt:
+    desc: Format Go code
     cmds:
-      - uv run ruff check --fix .
+      - go fmt ./...
 
-  format:
-    desc: Run ruff formatter
+  docker:
+    desc: Build Docker image
     cmds:
-      - uv run ruff format .
+      - docker build -t cloudflare-dns-updater .
 
-  format-check:
-    desc: Check ruff formatting
+  all:
+    desc: Run vet, tests, and build
     cmds:
-      - uv run ruff format --check .
-
-  typecheck:
-    desc: Run pyright type checker
-    cmds:
-      - uv run pyright
+      - task: lint
+      - task: test
+      - task: build
