@@ -55,6 +55,7 @@ var HTTPClient = &http.Client{
 }
 
 var BaseURL = "https://api.cloudflare.com/client/v4"
+var RetryDelay = 500 * time.Millisecond
 
 func main() {
 	configPath := flag.String("config", "config.yaml", "path to config YAML")
@@ -98,7 +99,7 @@ func LoadConfig(path string) Config {
 		TokenEnv:  "CLOUDFLARE_TOKEN",
 		IPSources: DefaultIPSources,
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path comes from user flag, intentional
 	if err != nil {
 		slog.Warn("config not found, using defaults", "path", path)
 		return cfg
@@ -147,7 +148,7 @@ func FetchIP(ctx context.Context, url string) string {
 	var ip string
 	if err := retry.New(
 		retry.Attempts(3),
-		retry.Delay(500*time.Millisecond),
+		retry.Delay(RetryDelay),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
 			slog.Warn("retrying IP source", "url", url, "attempt", n+1, "error", err)
@@ -161,7 +162,7 @@ func FetchIP(ctx context.Context, url string) string {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
@@ -201,7 +202,7 @@ type RecordPayload struct {
 func (c *CloudflareClient) Do(ctx context.Context, method, path string, body []byte, out any) error {
 	return retry.New(
 		retry.Attempts(3),
-		retry.Delay(500*time.Millisecond),
+		retry.Delay(RetryDelay),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
 			slog.Warn("retrying Cloudflare request", "method", method, "path", path, "attempt", n+1, "error", err)
@@ -217,8 +218,8 @@ func (c *CloudflareClient) Do(ctx context.Context, method, path string, body []b
 		resp, err := HTTPClient.Do(req)
 		if err != nil {
 			return err
-		}
-		defer resp.Body.Close()
+	}
+		defer func() { _ = resp.Body.Close() }()
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err

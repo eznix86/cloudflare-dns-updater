@@ -1,0 +1,59 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 4
+  allow-parallel-runners: true
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - gosec
+    - revive
+    - sloglint
+    - errorlint
+  disable:
+    - wsl
+    - wrapcheck
+    - err113
+    - gochecknoglobals
+    - gochecknoinits
+  settings:
+    revive:
+      severity: warning
+      rules:
+        - name: unused-parameter
+          severity: warning
+    errcheck:
+      check-blank: true
+      check-type-assertions: true
+  exclusions:
+    paths:
+      - node_modules
+    rules:
+      - linters:
+          - errcheck
+        source: "defer func\\(\\).*resp\\.Body\\.Close"
+      - linters:
+          - errcheck
+        source: "_, _ = fmt\\.Fprint"
+      - linters:
+          - errcheck
+        source: "_ = json\\.NewEncoder"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 3
+  uniq-by-line: false
+
+output:
+  formats:
+    text:
+      print-issued-lines: true
+      colors: true

@@ -27,6 +27,11 @@ tasks:
       - go vet ./...
       - go fix ./...
 
+  golangci:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run
+
   fmt:
     desc: Format Go code
     cmds:
@@ -38,9 +43,10 @@ tasks:
       - docker build -t cloudflare-dns-updater .
 
   all:
-    desc: Run vet, tests, and build
+    desc: Run lint, tests, build, and docker
     cmds:
       - task: lint
+      - task: golangci
       - task: test
       - task: build
       - task: docker
