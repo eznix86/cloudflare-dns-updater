@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build \
     -ldflags="-X main.Version=${VERSION} -X main.Commit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" \
-    -o /app/updater main.go
+    -o /app/updater .
 
 FROM alpine:latest
 ARG VERSION

@@ -4,12 +4,12 @@ tasks:
   run:
     desc: Run the DNS updater (dry-run with example config)
     cmds:
-      - go run main.go --config {{.CLI_ARGS | default "config.yaml.example"}}
+      - go run . --config {{.CLI_ARGS | default "config.yaml.example"}}
 
   build:
     desc: Build the Go binary
     cmds:
-      - go build -o updater main.go
+      - go build -o updater .
 
   test:
     desc: Run tests
