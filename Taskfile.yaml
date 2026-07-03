@@ -42,3 +42,4 @@ tasks:
       - task: lint
       - task: test
       - task: build
+      - task: docker
