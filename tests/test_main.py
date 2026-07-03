@@ -43,7 +43,8 @@ def test_main_with_injected_clients():
                 json=(
                     {"success": True, "result": [{"id": "zone123"}]}
                     if "/zones?" in str(req.url)
-                    else {"success": True, "result": []} if req.method == "GET"
+                    else {"success": True, "result": []}
+                    if req.method == "GET"
                     else {"success": True}
                 ),
             ),
@@ -58,6 +59,25 @@ def test_main_with_injected_clients():
     main(cfg, http_client, cf_client)
 
     assert [m for m, *_ in cf_requests] == ["GET", "GET", "POST"]
+
+
+def test_main_exits_when_cloudflare_times_out():
+    http_transport = httpx.MockTransport(lambda _: httpx.Response(200, text="1.2.3.4"))
+
+    def cloudflare_handler(req: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("The read operation timed out", request=req)
+
+    cf_transport = httpx.MockTransport(cloudflare_handler)
+    cfg = AppConfig(zones=[ZoneConfig(zone="example.com")])
+
+    with (
+        httpx.Client(transport=http_transport) as http_client,
+        httpx.Client(transport=cf_transport, base_url=BASE_URL) as cf_http,
+    ):
+        with pytest.raises(typer.Exit) as exc:
+            main(cfg, http_client, CloudflareClient(cf_http))
+
+    assert exc.value.exit_code == 1
 
 
 def test_main_exits_when_no_ip():

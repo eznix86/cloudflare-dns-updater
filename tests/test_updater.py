@@ -22,10 +22,12 @@ class TestGetPublicIP:
         assert ip == "1.2.3.4"
 
     def test_skips_failed_sources(self):
-        responses = iter([
-            httpx.Response(500, text=""),
-            httpx.Response(200, text="5.6.7.8"),
-        ])
+        responses = iter(
+            [
+                httpx.Response(500, text=""),
+                httpx.Response(200, text="5.6.7.8"),
+            ]
+        )
         transport = httpx.MockTransport(lambda _: next(responses))
         with httpx.Client(transport=transport) as client:
             ip = get_public_ip(["https://fail.com", "https://ok.com"], client=client)
@@ -48,6 +50,22 @@ class TestGetPublicIP:
             ip = get_public_ip(["https://fail.com", "https://ok.com"], client=client)
         assert ip == "5.6.7.8"
 
+    def test_retries_timeout(self):
+        requests = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            requests.append(req)
+            if len(requests) == 1:
+                raise httpx.ReadTimeout("timed out", request=req)
+            return httpx.Response(200, text="5.6.7.8")
+
+        transport = httpx.MockTransport(handler)
+        with httpx.Client(transport=transport) as client:
+            ip = get_public_ip(["https://example.com/ip"], client=client)
+
+        assert ip == "5.6.7.8"
+        assert len(requests) == 2
+
 
 class TestResolveZone:
     def test_returns_zone_id(self):
@@ -66,15 +84,37 @@ class TestResolveZone:
             cf = CloudflareClient(client)
             assert resolve_zone(cf, "example.com") is None
 
+    def test_retries_timeout(self):
+        requests = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            requests.append(req)
+            if len(requests) == 1:
+                raise httpx.ReadTimeout("timed out", request=req)
+            return httpx.Response(200, json=ZONE_RESPONSE)
+
+        transport = httpx.MockTransport(handler)
+        with httpx.Client(transport=transport, base_url=BASE_URL) as client:
+            cf = CloudflareClient(client)
+            assert resolve_zone(cf, "example.com") == "zone123"
+
+        assert len(requests) == 2
+
 
 class TestSyncRecord:
     def test_skips_when_ip_unchanged(self):
         requests = []
         transport = httpx.MockTransport(
-            lambda req: (requests.append((req.method, str(req.url))) or httpx.Response(
-                200,
-                json={"success": True, "result": [{"id": "rec123", "content": "1.2.3.4", "name": "www.example.com"}]},
-            )),
+            lambda req: (
+                requests.append((req.method, str(req.url)))
+                or httpx.Response(
+                    200,
+                    json={
+                        "success": True,
+                        "result": [{"id": "rec123", "content": "1.2.3.4", "name": "www.example.com"}],
+                    },
+                )
+            ),
         )
         with httpx.Client(transport=transport, base_url=BASE_URL) as client:
             cf = CloudflareClient(client)
@@ -115,11 +155,7 @@ class TestSyncRecord:
                 requests.append((req.method, str(req.url), req.content)),
                 httpx.Response(
                     200,
-                    json=(
-                        RECORDS_RESPONSE
-                        if req.method == "GET"
-                        else SUCCESS_RESPONSE
-                    ),
+                    json=(RECORDS_RESPONSE if req.method == "GET" else SUCCESS_RESPONSE),
                 ),
             )[1],
         )
@@ -144,7 +180,8 @@ class TestSyncAllZones:
                     json=(
                         {"success": True, "result": [{"id": "zone123"}]}
                         if "/zones?" in str(req.url) and "/dns_records" not in str(req.url)
-                        else RECORDS_RESPONSE if req.method == "GET"
+                        else RECORDS_RESPONSE
+                        if req.method == "GET"
                         else SUCCESS_RESPONSE
                     ),
                 ),
@@ -155,10 +192,13 @@ class TestSyncAllZones:
 
             config = AppConfig(
                 zones=[
-                    ZoneConfig(zone="example.com", records=[
-                        RecordConfig(name="www"),
-                        RecordConfig(name="api"),
-                    ]),
+                    ZoneConfig(
+                        zone="example.com",
+                        records=[
+                            RecordConfig(name="www"),
+                            RecordConfig(name="api"),
+                        ],
+                    ),
                 ],
             )
 
@@ -178,7 +218,8 @@ class TestSyncAllZones:
                         if "missing.com" in str(req.url)
                         else {"success": True, "result": [{"id": "zone456"}]}
                         if "/zones?" in str(req.url)
-                        else RECORDS_RESPONSE if req.method == "GET"
+                        else RECORDS_RESPONSE
+                        if req.method == "GET"
                         else SUCCESS_RESPONSE
                     ),
                 ),

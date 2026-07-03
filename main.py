@@ -29,7 +29,15 @@ def main(cfg: AppConfig, http_client: httpx.Client, cf_client: DNSClient):
         logger.error("All IP sources failed")
         raise typer.Exit(1)
 
-    sync_all_zones(cf_client, cfg, ip)
+    try:
+        sync_all_zones(cf_client, cfg, ip)
+    except httpx.TimeoutException as exc:
+        logger.error("Cloudflare request timed out", error=str(exc))
+        raise typer.Exit(1) from None
+    except httpx.HTTPError as exc:
+        logger.error("Cloudflare request failed", error=str(exc))
+        raise typer.Exit(1) from None
+
     logger.info("All zones updated successfully")
 
 

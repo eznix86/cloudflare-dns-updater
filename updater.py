@@ -5,19 +5,35 @@ from cloudflare_client import DNSClient
 from config import AppConfig
 
 logger = structlog.get_logger()
+IP_SOURCE_RETRIES = 3
+IP_SOURCE_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
 
 def get_public_ip(sources: list[str], *, client: httpx.Client | None = None) -> str | None:
-    c = client or httpx.Client()
-    for source in sources:
-        try:
-            resp = c.get(source, timeout=10)
-            ip = resp.text.strip()
-            if ip:
-                logger.info("Got public IP", source=source, public_ip=ip)
-                return ip
-        except Exception:
-            continue
+    c = client or httpx.Client(timeout=IP_SOURCE_TIMEOUT)
+    try:
+        for source in sources:
+            for attempt in range(1, IP_SOURCE_RETRIES + 1):
+                try:
+                    resp = c.get(source, timeout=IP_SOURCE_TIMEOUT)
+                    resp.raise_for_status()
+                    ip = resp.text.strip()
+                    if ip:
+                        logger.info("Got public IP", source=source, public_ip=ip)
+                        return ip
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code < 500:
+                        break
+                    if attempt == IP_SOURCE_RETRIES:
+                        break
+                    logger.warning("Retrying IP source", source=source, attempt=attempt, error=str(exc))
+                except httpx.HTTPError as exc:
+                    if attempt == IP_SOURCE_RETRIES:
+                        break
+                    logger.warning("Retrying IP source", source=source, attempt=attempt, error=str(exc))
+    finally:
+        if client is None:
+            c.close()
     return None
 
 
