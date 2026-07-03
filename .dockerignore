@@ -5,5 +5,4 @@
 README.md
 Taskfile.yaml
 config.yaml
-config.yaml.example
 main_test.go
