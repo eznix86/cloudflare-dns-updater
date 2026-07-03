@@ -14,12 +14,16 @@ Dynamic DNS updater that syncs your public IP to Cloudflare DNS records.
 ## Usage
 
 ```bash
-uv run main.py
+# with config.yaml in current directory
+./updater
+
+# or specify config path
+./updater --config /path/to/config.yaml
 ```
 
 ### Dry run
 
-Enable `dry_run: true` in `config.yaml` to log what would happen without making any changes.
+Set `dry_run: true` in your config to log what would happen without making any changes.
 
 ## Configuration
 
@@ -27,8 +31,11 @@ Enable `dry_run: true` in `config.yaml` to log what would happen without making 
 dry_run: false
 token_env: CLOUDFLARE_TOKEN
 ip_sources:
-  - https://ifconfig.me/ip
-  - https://api.ipify.org
+  - https://ipv4.icanhazip.com
+  - https://whatismyip.akamai.com
+  - https://checkip.amazonaws.com
+  - https://api4.ipify.org
+  - https://ifconfig.co/ip
 zones:
   - zone: example.com
     records:
@@ -96,9 +103,21 @@ spec:
 ## Development
 
 ```bash
-task test       # run tests
-task coverage   # test with coverage report
-task lint       # ruff check
-task typecheck  # pyright
-task format     # ruff format
+task test       # run tests (testify/suite)
+task lint       # go vet + go fix
+task golangci   # golangci-lint (full lint suite)
+task build      # compile binary
+task run        # dry run with example config
+task docker     # build Docker image
+task all        # lint → test → build → docker
 ```
+
+Default IP sources (used when `ip_sources` is empty or config is missing):
+
+- `https://ipv4.icanhazip.com`
+- `https://whatismyip.akamai.com`
+- `https://checkip.amazonaws.com`
+- `https://api4.ipify.org`
+- `https://ifconfig.co/ip`
+
+IP lookups run concurrently. The first successful response wins. Each source is retried up to 3 times with a configurable delay on 5xx errors. 4xx errors are not retried.
