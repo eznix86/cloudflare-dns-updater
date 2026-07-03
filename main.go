@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -180,7 +181,12 @@ func FetchIP(ctx context.Context, url string) string {
 		if resp.StatusCode >= 400 {
 			return retry.Unrecoverable(fmt.Errorf("HTTP %d", resp.StatusCode))
 		}
-		ip = strings.TrimSpace(string(body))
+		raw := strings.TrimSpace(string(body))
+		parsed := net.ParseIP(raw)
+		if parsed == nil || parsed.To4() == nil {
+			return retry.Unrecoverable(fmt.Errorf("invalid IPv4 response %q", raw))
+		}
+		ip = parsed.String()
 		return nil
 	}); err != nil && !errors.Is(err, context.Canceled) {
 		slog.Warn("IP source failed", "url", url, "error", err)

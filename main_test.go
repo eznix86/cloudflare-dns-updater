@@ -187,6 +187,24 @@ func (s *Suite) TestFetchIP() {
 		is.Empty(ip)
 	})
 
+	s.Run("IPv6 body returns empty", func() {
+		s := NewIPServer("2001:db8::1")
+		defer s.Close()
+
+		ip := FetchIP(context.Background(), s.URL)
+
+		is.Empty(ip)
+	})
+
+	s.Run("IPv4 body is trimmed", func() {
+		s := NewIPServer("  \n9.9.9.9 \n")
+		defer s.Close()
+
+		ip := FetchIP(context.Background(), s.URL)
+
+		is.Equal("9.9.9.9", ip)
+	})
+
 	s.Run("4xx not retried", func() {
 		var n atomic.Int32
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
