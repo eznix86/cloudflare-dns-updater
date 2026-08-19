@@ -2,7 +2,7 @@ ARG VERSION=dev
 ARG GIT_COMMIT=unknown
 ARG BUILD_DATE=unknown
 
-FROM golang:1.26-alpine AS build
+FROM golang:1.27-alpine AS build
 ARG VERSION
 ARG GIT_COMMIT
 ARG BUILD_DATE
